@@ -5,6 +5,16 @@ from keras.layers import (Conv1D, Dense, Activation, MaxPooling1D, Add,
                           BatchNormalization, Lambda, Dot, Multiply)
 
 
+def get_pre_net(input_data):
+    prenet = Dense(256)(input_data)
+    prenet = Activation('relu')(prenet)
+    prenet = Dropout(0.5)(prenet)
+    prenet = Dense(128)(prenet)
+    prenet = Activation('relu')(prenet)
+    prenet = Dropout(0.5)(prenet)
+
+    return prenet
+
 def get_conv1dbank(K_, input_data):
     conv = Conv1D(filters=128, kernel_size=1,
                   strides=1, padding='same')(input_data)
@@ -77,20 +87,9 @@ def get_CBHG_post_process(input_data, K_CBHG):
 
     highway_net = get_highway_output(residual, 4, activation='relu')
 
-    CBHG_encoder = Bidirectional(GRU(128))(highway_net)
+    CBHG_post_proc = Bidirectional(GRU(128))(highway_net)
 
-    return CBHG_encoder
-
-
-def get_pre_net(input_data):
-    prenet = Dense(256)(input_data)
-    prenet = Activation('relu')(prenet)
-    prenet = Dropout(0.5)(prenet)
-    prenet = Dense(128)(prenet)
-    prenet = Activation('relu')(prenet)
-    prenet = Dropout(0.5)(prenet)
-
-    return prenet
+    return CBHG_post_proc
 
 # see https://arxiv.org/pdf/1609.08144.pdf (stack of GRUs with vertical
 # residual connections)

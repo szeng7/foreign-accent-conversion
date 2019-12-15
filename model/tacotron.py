@@ -1,6 +1,6 @@
 from keras.layers import Input, Embedding, concatenate, RepeatVector, Dense, Reshape
 from keras.models import Model
-from helper_layers import *
+from .helper_layers import *
 
 
 def get_tacotron_model(n_mels, r, k1, k2, nb_char_max,
