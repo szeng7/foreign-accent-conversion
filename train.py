@@ -1,9 +1,8 @@
 from hparams import *
-from sklearn.externals import joblib
 from keras.optimizers import Adam
-from sklearn.externals import joblib
 from model.tacotron import get_tacotron_model
 import pickle
+import numpy as np
 
 # import prepared data
 # decoder_input_training = joblib.load('data/decoder_input_training.pkl')
@@ -14,15 +13,25 @@ import pickle
 # vocabulary = joblib.load('data/vocabulary.pkl')
 
 with open('./data/lj/small.pickle', 'rb') as f:
-    id_to_wav_dict = pickle.load(f)
-    print(id_to_wav_dict)
+    data = pickle.load(f)
+    data = data[0]
 
+with open('./data/lj/vocab.pickle', 'rb') as f:
+    vocabulary = pickle.load(f)
+    print(vocabulary)
+
+spectro_training = np.asarray([data[0]]*32)
+mel_spectro_training = np.asarray([data[1]]*32)
+decoder_input_training = np.asarray([data[2]]*32)
+text_input_training = np.asarray([data[3]]*32)
+
+print(decoder_input_training)
 
 model = get_tacotron_model(N_MEL, r, K1, K2, NB_CHARS_MAX,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
                            MAX_MAG_TIME_LENGTH, N_FFT,
                            vocabulary)
-
+#model.summary()
 opt = Adam()
 model.compile(optimizer=opt,
               loss=['mean_absolute_error', 'mean_absolute_error'])

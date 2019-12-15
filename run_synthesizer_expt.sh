@@ -1,7 +1,7 @@
-echo "Downloading requirements"
-pip install -r requirements.txt
+#echo "Downloading requirements"
+#pip install -r requirements.txt
 
-#RAW_DATA_DIR=/Volumes/Elements/lj/LJSpeech-1.1
+RAW_DATA_DIR=/Volumes/Elements/lj/LJSpeech-1.1
 DATA_DIR=data/lj
 MODELS_DIR=models
 SMALL=${DATA_DIR}/small.pickle
@@ -24,19 +24,19 @@ if [ ! -f "${DATA_DIR}/small.pickle" ]; then
 
 fi
 
-TRAINER="python trainer.py"
+#TRAINER="python trainer.py"
 
-echo "Training..."
-${TRAINER} \
-        --train_data ${SMALL} \
-        --test_data ${SMALL} \
-        --num_epochs 1 \
-        --batch_size 32 \
-        --loss "binary_crossentropy" \
-        --filters 512 \
-        --optimizer "adam" \
-        --learning_rate 0.001 \
+#echo "Training..."
+#${TRAINER} \
+#        --train_data ${SMALL} \
+#        --test_data ${SMALL} \
+#        --num_epochs 1 \
+#        --batch_size 32 \
+#        --loss "binary_crossentropy" \
+#        --filters 512 \
+#        --optimizer "adam" \
+#        --learning_rate 0.001 \
 
-echo "done"
+#echo "done"
 
 # eof
