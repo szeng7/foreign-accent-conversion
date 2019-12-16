@@ -8,10 +8,11 @@ import argparse as ap
 import os
 import csv
 import tensorflow as tf
+import librosa
+from processing.proc_audio import from_spectro_to_waveform
 
 import matplotlib.pyplot as plt
 from hparams import *
-import librosa
 
 import sys
 #np.set_printoptions(threshold=sys.maxsize)
@@ -96,7 +97,11 @@ def main():
             if ".wav" in wav:
                 id = wav.rstrip('.wav')
                 path = ARGS.raw_data_dir + "/wavs/" + wav
-                rate, data = wavfile.read(path)
+
+                # forces loading of library here?
+                import librosa
+                # librosa outperforms scipy wavfile by doing normalization as well
+                data, rate = librosa.core.load(path, sr=SAMPLING_RATE)
                 if id not in id_to_wav_dict:
                     id_to_wav_dict[id] = [data]
 
@@ -108,6 +113,7 @@ def main():
                 if id in id_to_wav_dict:
                     id_to_wav_dict[id].append(raw_transcription)
 
+        # Dict written as ['filename' : [wav_file, text]]
         with open(ARGS.data_dir + "/all.raw.pickle", 'wb') as f:
             pickle.dump(id_to_wav_dict, f)
 
@@ -150,7 +156,15 @@ def main():
                                                       N_MEL, REF_DB,
                                                       MAX_DB)
 
-
+                # Validate signal reconstruction
+                # predicted_spectro_item = spectro
+                # predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
+                #                                                 HOP_LENGTH, WIN_LENGTH,
+                #                                                 N_ITER, WINDOW_TYPE,
+                #                                                 MAX_DB, REF_DB, PREEMPHASIS)
+                # save_wav(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
+                # exit(0)
+                
                 """
                 #wav to melspectrogram conversion
                 S = librosa.feature.melspectrogram(wav, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
@@ -228,7 +242,6 @@ def main():
                 #if counter % split1 == 0:
                 #    break
 
-
         with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
             pickle.dump(vocab, f)
 
@@ -243,6 +256,13 @@ def main():
 
         #with open(ARGS.data_dir + "/test.pickle", 'wb') as f:
         #    pickle.dump(test_dataset, f)
+
+
+def save_wav(wav, path, sr):
+	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+	#proposed by @dsmiller
+	wavfile.write(path, sr, wav.astype(np.int16))
+
 
 if __name__ == "__main__":
     main()

@@ -12,6 +12,11 @@ import numpy as np
 # text_input_training = joblib.load('data/text_input_ml_training.pkl')
 # vocabulary = joblib.load('data/vocabulary.pkl')
 
+# with open('./data/lj/all.raw.pickle', 'rb') as f:
+#     data = pickle.load(f)
+
+#     print(data)
+
 with open('./data/lj/small.pickle', 'rb') as f:
     data = pickle.load(f)
     data = data[0]
@@ -42,5 +47,5 @@ train_history = model.fit([text_input_training, decoder_input_training],
                           verbose=1, validation_split=0.15)
 
 
-joblib.dump(train_history.history, 'results/training_history.pkl')
+# joblib.dump(train_history.history, 'results/training_history.pkl')
 model.save('results/model.h5')
