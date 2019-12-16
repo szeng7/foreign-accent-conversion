@@ -3,6 +3,7 @@ from keras.optimizers import Adam
 from model.tacotron import get_tacotron_model
 import pickle
 import numpy as np
+from keras.callbacks import ModelCheckpoint
 
 with open('./data/lj/dataset.pickle', 'rb') as f:
     data = pickle.load(f)
