@@ -10,73 +10,82 @@ import csv
 import tensorflow as tf
 
 import matplotlib.pyplot as plt
-from hparams import *
 import librosa
 
 import sys
-#np.set_printoptions(threshold=sys.maxsize)
-
-def get_spectros(wav, preemphasis, n_fft,
-                 hop_length, win_length,
-                 sampling_rate, n_mel,
-                 ref_db, max_db):
 
 
-    wav = wav.astype('float')
-    #wav /= wav.max()
-    waveform = wav
 
+#constants to be used when creating spectrograms/preprocessing
+
+N_FFT = 1024 #number of fourier transform points
+WINDOW_TYPE='hann' #type of window for FT
+PREEMPHASIS = 0.97 #importance factor on high freq signals
+SAMPLING_RATE = 16000
+FRAME_LENGTH = 0.05  # seconds, window length
+FRAME_SHIFT = 0.0125  # seconds, temporal shift
+HOP_LENGTH = int(SAMPLING_RATE * FRAME_SHIFT)
+WIN_LENGTH = int(SAMPLING_RATE * FRAME_LENGTH)
+N_MEL = 80 #num of mel bands
+REF_DB = 20 #reference level decibel
+MAX_DB = 100 #max decibel
+R = 5 #reduction factor
+MAX_MEL_TIME_LENGTH = 200  #max of the time dimension for a mel spectrogram
+MAX_MAG_TIME_LENGTH = 850  #max of the time dimension for a spectrogram
+NB_CHARS_MAX = 200  #max of the input text data
+
+
+def get_spectrograms(wav):
+    """
+    Helper function to convert wav form to spectrograms
+    """
+
+    waveform = wav.astype('float')
     waveform, _ = librosa.effects.trim(waveform)
 
-    # use pre-emphasis to filter out lower frequencies
-    waveform = np.append(waveform[0],
-                         waveform[1:] - preemphasis * waveform[:-1])
+    #filter out lower frequencies
+    waveform = np.append(waveform[0], waveform[1:] - PREEMPHASIS * waveform[:-1])
 
-    # compute the stft
-    stft_matrix = librosa.stft(y=waveform,
-                               n_fft=n_fft,
-                               hop_length=hop_length,
-                               win_length=win_length)
+    #short time fourier calculated
+    stft_matrix = librosa.stft(y=waveform, n_fft=N_FFT, hop_length=HOP_LENGTH, win_length=WIN_LENGTH)
 
-    # compute magnitude and mel spectrograms
-    spectro = np.abs(stft_matrix)
+    #magnitude and mel spectrograms calculated
+    spectrogram = np.abs(stft_matrix)
 
-    mel_transform_matrix = librosa.filters.mel(sampling_rate,
-                                               n_fft,
-                                               n_mel)
-    mel_spectro = np.dot(mel_transform_matrix,
-                         spectro)
+    mel_transform_matrix = librosa.filters.mel(SAMPLING_RATE, N_FFT, N_MEL)
+    mel_spectrogram = np.dot(mel_transform_matrix, spectrogram)
 
-    # Use the decidel scale
-    mel_spectro = 20 * np.log10(np.maximum(1e-5, mel_spectro))
-    spectro = 20 * np.log10(np.maximum(1e-5, spectro))
+    #convert to DB
+    mel_spectrogram = 20 * np.log10(np.maximum(1e-5, mel_spectrogram))
+    spectrogram = 20 * np.log10(np.maximum(1e-5, spectrogram))
 
-    # Normalise the spectrograms
-    mel_spectro = np.clip((mel_spectro - ref_db + max_db) / max_db, 1e-8, 1)
-    spectro = np.clip((spectro - ref_db + max_db) / max_db, 1e-8, 1)
+    #normalize
+    mel_spectrogram = np.clip((mel_spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
+    spectrogram = np.clip((spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
 
-    # Transpose the spectrograms to have the time as first dimension
-    # and the frequency as second dimension
-    mel_spectro = mel_spectro.T.astype(np.float32)
-    spectro = spectro.T.astype(np.float32)
+    #(time, freq)
+    mel_spectrogram = mel_spectrogram.T.astype(np.float32)
+    spectrogram = spectrogram.T.astype(np.float32)
 
-    return mel_spectro, spectro
+    return mel_spectrogram, spectrogram
 
-def get_padded_spectros(wav, r, preemphasis, n_fft,
-                        hop_length, win_length, sampling_rate,
-                        n_mel, ref_db, max_db):
-    mel_spectro, spectro = get_spectros(wav, preemphasis, n_fft,
-                                        hop_length, win_length, sampling_rate,
-                                        n_mel, ref_db, max_db)
-    t = mel_spectro.shape[0]
-    nb_paddings = r - (t % r) if t % r != 0 else 0  # for reduction
-    mel_spectro = np.pad(mel_spectro,
+def get_padded_spectrograms(wav):
+    """
+    Helper function to pad the spectrograms to specific length
+    """
+    mel_spectrogram, spectrogram = get_spectrograms(wav)
+    time = mel_spectrogram.shape[0]
+    if time % R != 0:
+        nb_paddings = R - (time % R)
+    else:
+        nb_paddings = 0
+    mel_spectrogram = np.pad(mel_spectrogram,
                         [[0, nb_paddings], [0, 0]],
                         mode="constant")
-    spectro = np.pad(spectro,
+    spectrogram = np.pad(spectrogram,
                     [[0, nb_paddings], [0, 0]],
                     mode="constant")
-    return wav, mel_spectro.reshape((-1, n_mel * r)), spectro
+    return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
 def main():
 
@@ -92,13 +101,22 @@ def main():
         #download and parse the data from the local repo
         id_to_wav_dict = {}
 
+        print("starting")
+        i = 0
+
         for wav in os.listdir(ARGS.raw_data_dir + "/wavs"):
             if ".wav" in wav:
                 id = wav.rstrip('.wav')
                 path = ARGS.raw_data_dir + "/wavs/" + wav
-                rate, data = wavfile.read(path)
+
+                data, rate = librosa.load(path, sr=SAMPLING_RATE)
                 if id not in id_to_wav_dict:
                     id_to_wav_dict[id] = [data]
+            i += 1
+            if i % 100 == 0:
+                print(f"Done with {i}")
+
+        print("done extracting all wavs")
 
         with open(ARGS.raw_data_dir + "/metadata.csv") as csv_file:
             csv_reader = csv.reader(csv_file, delimiter='|')
@@ -112,20 +130,32 @@ def main():
             pickle.dump(id_to_wav_dict, f)
 
     else:
-        """
-        Add more on the exact preprocessing later
-        when we know exactly what format we need
-
-        """
-
-        n_mels = 128
-        n_fft = 2048
-        hop_length = 512
-        sr = 22050
 
         with open(ARGS.data_dir + "/all.raw.pickle", 'rb') as f:
             id_to_wav_dict = pickle.load(f)
+            path = '/Volumes/Elements/lj/LJSpeech-1.1/wavs/LJ001-0001.wav'
+            #print(id_to_wav_dict['LJ001-0001'])
+            wav, rate = librosa.load(path, sr=SAMPLING_RATE)
+            mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
+            sess = tf.Session()
+            decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectrogram[:1, :]),
+                                mel_spectrogram[:-1, :]), 0)
+            decod_inp = sess.run(decod_inp_tensor)
+            decod_inp = decod_inp[:, -N_MEL:]
 
+            #padding time dimension
+            padded_mel_spectrogram = np.zeros((MAX_MEL_TIME_LENGTH, mel_spectrogram.shape[1]))
+            padded_mel_spectrogram[:mel_spectrogram.shape[0], :mel_spectrogram.shape[1]] = mel_spectrogram[:MAX_MEL_TIME_LENGTH]
+
+            padded_decod_input = np.zeros((MAX_MEL_TIME_LENGTH, decod_inp.shape[1]))
+            padded_decod_input[:decod_inp.shape[0], :decod_inp.shape[1]] = decod_inp[:MAX_MEL_TIME_LENGTH]
+
+            padded_spectrogram = np.zeros((MAX_MAG_TIME_LENGTH, spectrogram.shape[1]))
+            padded_spectrogram[:spectrogram.shape[0], :spectrogram.shape[1]] = spectrogram[:MAX_MAG_TIME_LENGTH]
+
+            tuple = (padded_mel_spectrogram, padded_spectrogram, padded_decod_input)
+
+            """
             #40-40-20 split
             #train1-train2-test, splitting train since datasets would be too large to pickle
             split1 = 0.4*len(id_to_wav_dict.items())
@@ -137,103 +167,78 @@ def main():
             toy_dataset = []
 
             counter = 0
+            vocab = {} #for encoding text, character by character
+            vocab['P'] = 0
+            i = 1
+
+            temp = {}
+            temp['LJ001-0001'] = data
+            id_to_wav_dict = temp
 
             for key, value in id_to_wav_dict.items():
                 counter += 1
                 wav = value[0]
                 sentence = value[1]
 
-                wav, mel_spectro, spectro = get_padded_spectros(wav, r,
-                                                      PREEMPHASIS, N_FFT,
-                                                      HOP_LENGTH, WIN_LENGTH,
-                                                      SAMPLING_RATE,
-                                                      N_MEL, REF_DB,
-                                                      MAX_DB)
+                mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
 
-
-                """
-                #wav to melspectrogram conversion
-                S = librosa.feature.melspectrogram(wav, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
-
-                #wav to spectrogram conversion
-                D = np.abs(librosa.stft(wav, n_fft=n_fft, hop_length=hop_length))
-                D = np.maximum(1e-5, D)
-                DB = librosa.amplitude_to_db(D)
-
-                n_frame = S.shape[1]
-                """
-
-                list_of_existing_chars = set(sentence.lower().replace(" ", ""))
-                vocab = {}
-                vocab['P'] = 0
-                i = 1
-                for char in list(list_of_existing_chars):
-                    vocab[char] = i
-                    i += 1
+                list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
+                for char in list_of_existing_chars:
+                    if char not in vocab:
+                        vocab[char] = i
+                        i += 1
 
                 list_of_char_id = [vocab[char] for char in list(sentence.lower().replace(" ", ""))]
 
                 if len(list_of_char_id) < 200:
                     for i in range(200 - len(list_of_char_id)):
                         list_of_char_id.append(vocab['P'])
+                else:
+                    list_of_char_id = list_of_char_id[:200]
 
                 sess = tf.Session()
-                decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectro[:1, :]),
-                                  mel_spectro[:-1, :]), 0)
+                decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectrogram[:1, :]),
+                                  mel_spectrogram[:-1, :]), 0)
                 decod_inp = sess.run(decod_inp_tensor)
                 decod_inp = decod_inp[:, -N_MEL:]
 
-                print(decod_inp.shape)
-                print(mel_spectro.shape)
-                print(spectro.shape)
+                #padding time dimension
+                padded_mel_spectrogram = np.zeros((MAX_MEL_TIME_LENGTH, mel_spectrogram.shape[1]))
+                padded_mel_spectrogram[:mel_spectrogram.shape[0], :mel_spectrogram.shape[1]] = mel_spectrogram[:MAX_MEL_TIME_LENGTH]
 
-                # Padding of the temporal dimension
-                dim0_mel_spectro = mel_spectro.shape[0]
-                dim1_mel_spectro = mel_spectro.shape[1]
-                padded_mel_spectro = np.zeros((MAX_MEL_TIME_LENGTH, dim1_mel_spectro))
-                padded_mel_spectro[:dim0_mel_spectro, :dim1_mel_spectro] = mel_spectro[:MAX_MEL_TIME_LENGTH]
+                padded_decod_input = np.zeros((MAX_MEL_TIME_LENGTH, decod_inp.shape[1]))
+                padded_decod_input[:decod_inp.shape[0], :decod_inp.shape[1]] = decod_inp[:MAX_MEL_TIME_LENGTH]
 
-                dim0_decod_inp = decod_inp.shape[0]
-                dim1_decod_inp = decod_inp.shape[1]
-                padded_decod_input = np.zeros((MAX_MEL_TIME_LENGTH, dim1_decod_inp))
-                padded_decod_input[:dim0_decod_inp, :dim1_decod_inp] = decod_inp[:MAX_MEL_TIME_LENGTH]
+                padded_spectrogram = np.zeros((MAX_MAG_TIME_LENGTH, spectrogram.shape[1]))
+                padded_spectrogram[:spectrogram.shape[0], :spectrogram.shape[1]] = spectrogram[:MAX_MAG_TIME_LENGTH]
 
-                dim0_spectro = spectro.shape[0]
-                dim1_spectro = spectro.shape[1]
-                padded_spectro = np.zeros((MAX_MAG_TIME_LENGTH, dim1_spectro))
-                padded_spectro[:dim0_spectro, :dim1_spectro] = spectro[:MAX_MAG_TIME_LENGTH]
-
-                #mel_spectro_data.append(padded_mel_spectro)
-                #spectro_data.append(padded_spectro)
-                #decoder_input.append(padded_decod_input)
-
-                #(spectrogram_filename, mel_spectrogram_filename, n_frames, text)
-                tuple = (padded_spectro, padded_mel_spectro, padded_decod_input, list_of_char_id)
+                tuple = (padded_spectrogram, padded_mel_spectrogram, padded_decod_input, list_of_char_id)
                 toy_dataset.append(tuple)
 
-                print(tuple)
+                if counter < split1:
+                    train1_dataset.append(tuple)
+                elif split1 <= counter <= split2:
+                    train2_dataset.append(tuple)
+                else:
+                    test_dataset.append(tuple)
 
-                break
+                if counter % 1000 == 0:
+                    print(f"Files done preprocesing: {counter}")
 
-                #if counter < split1:
-                #    train1_dataset.append(tuple)
-                #elif split1 <= counter <= split2:
-                #    train2_dataset.append(tuple)
-                #else:
-                #    test_dataset.append(tuple)
-
-                #if counter % 1000 == 0:
-                #    print(f"Files done preprocesing: {counter}")
+                tuple = (padded_mel_spectrogram, padded_spectrogram, padded_decod_input)
 
                 #if counter % split1 == 0:
                 #    break
+            """
 
+        with open("hopefully_gold.pickle", 'wb') as f:
+            pickle.dump(tuple, f)
 
-        with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
-            pickle.dump(vocab, f)
+        #with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
+        #    pickle.dump(vocab, f)
 
-        with open(ARGS.data_dir + "/small.pickle", 'wb') as f:
-            pickle.dump(toy_dataset, f)
+        #with open(ARGS.data_dir + "/small.pickle", 'wb') as f:
+        #    pickle.dump(toy_dataset, f)
 
         #with open(ARGS.data_dir + "/train1.pickle", 'wb') as f:
         #    pickle.dump(train1_dataset, f)
