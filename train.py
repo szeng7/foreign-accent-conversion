@@ -24,10 +24,14 @@ opt = Adam()
 model.compile(optimizer=opt,
               loss=['mean_absolute_error', 'mean_absolute_error'])
 
+checkpoint = ModelCheckpoint("results/model.h5", monitor='loss', verbose=1,
+    save_best_only=True, mode='auto', period=1)
+
 train_history = model.fit([text_input_training, decoder_input_training],
                           [mel_spectro_training, spectro_training],
                           epochs=NB_EPOCHS, batch_size=BATCH_SIZE,
-                          verbose=1, validation_split=0.15)
+                          verbose=1, validation_split=0.20,
+                          callbacks=[checkpoint])
 
 print('------SAVING MODEL---------')
 model.save('results/model.h5')
