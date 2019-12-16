@@ -1,7 +1,7 @@
 #echo "Downloading requirements"
 #pip install -r requirements.txt
 
-RAW_DATA_DIR=/Volumes/Elements/lj/LJSpeech-1.1
+RAW_DATA_DIR=data/LJSpeech-1.1
 DATA_DIR=data/lj
 MODELS_DIR=models
 SMALL=${DATA_DIR}/small.pickle
