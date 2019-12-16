@@ -138,15 +138,11 @@ def main():
         with open(ARGS.data_dir + "/all.raw.pickle", 'rb') as f:
             id_to_wav_dict = pickle.load(f)
 
-            #40-40-20 split
-            #train1-train2-test, splitting train since datasets would be too large to pickle
-            split1 = 0.4*len(id_to_wav_dict.items())
-            split2 = 0.8*len(id_to_wav_dict.items())
-
-            train1_dataset = []
-            train2_dataset = []
-            test_dataset = []
-            toy_dataset = []
+            # list of all of the training data
+            all_padded_spectro = []
+            all_mel_spectro = []
+            all_padded_decod = []
+            all_list_char_id = []
 
             counter = 0
             vocab = {} #for encoding text, character by character
@@ -199,39 +195,20 @@ def main():
                 padded_spectrogram = np.zeros((MAX_MAG_TIME_LENGTH, spectrogram.shape[1]))
                 padded_spectrogram[:spectrogram.shape[0], :spectrogram.shape[1]] = spectrogram[:MAX_MAG_TIME_LENGTH]
 
-                tuple = (padded_spectrogram, padded_mel_spectrogram, padded_decod_input, list_of_char_id)
-                toy_dataset.append(tuple)
 
-                if counter < split1:
-                    train1_dataset.append(tuple)
-                elif split1 <= counter <= split2:
-                    train2_dataset.append(tuple)
-                else:
-                    test_dataset.append(tuple)
+                all_padded_spectro.append(padded_spectrogram)
+                all_mel_spectro.append(padded_mel_spectrogram)
+                all_padded_decod.append(padded_decod_input)
+                all_list_char_id.append(list_of_char_id)
+            
 
-                if counter % 1000 == 0:
-                    print(f"Files done preprocesing: {counter}")
-
-                tuple = (padded_mel_spectrogram, padded_spectrogram, padded_decod_input)
-
-                #if counter % split1 == 0:
-                #    break
-
-
+        dataset = (all_padded_spectro, all_mel_spectro, all_padded_decod, all_list_char_id)
+        print("------------SAVING TO FILES---------------")
         with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
             pickle.dump(vocab, f)
 
         with open(ARGS.data_dir + "/small.pickle", 'wb') as f:
-            pickle.dump(toy_dataset, f)
-
-        #with open(ARGS.data_dir + "/train1.pickle", 'wb') as f:
-        #    pickle.dump(train1_dataset, f)
-
-        #with open(ARGS.data_dir + "/train2.pickle", 'wb') as f:
-        #    pickle.dump(train2_dataset, f)
-
-        #with open(ARGS.data_dir + "/test.pickle", 'wb') as f:
-        #    pickle.dump(test_dataset, f)
+            pickle.dump(dataset, f)
 
 
 def save_wav(wav, path, sr):

@@ -19,18 +19,14 @@ import numpy as np
 
 with open('./data/lj/small.pickle', 'rb') as f:
     data = pickle.load(f)
-    data = data[0]
 
 with open('./data/lj/vocab.pickle', 'rb') as f:
     vocabulary = pickle.load(f)
-    print(vocabulary)
 
-spectro_training = np.asarray([data[0]]*32)
-mel_spectro_training = np.asarray([data[1]]*32)
-decoder_input_training = np.asarray([data[2]]*32)
-text_input_training = np.asarray([data[3]]*32)
-
-print(decoder_input_training)
+spectro_training = np.asarray(data[0])
+mel_spectro_training = np.asarray(data[1])
+decoder_input_training = np.asarray(data[2])
+text_input_training = np.asarray(data[3])
 
 model = get_tacotron_model(N_MEL, r, K1, K2, NB_CHARS_MAX,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
@@ -46,6 +42,6 @@ train_history = model.fit([text_input_training, decoder_input_training],
                           epochs=NB_EPOCHS, batch_size=BATCH_SIZE,
                           verbose=1, validation_split=0.15)
 
-
+print('------SAVING MODEL---------')
 # joblib.dump(train_history.history, 'results/training_history.pkl')
 model.save('results/model.h5')
