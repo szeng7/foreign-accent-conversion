@@ -8,6 +8,8 @@ import argparse as ap
 import os
 import csv
 import tensorflow as tf
+import librosa
+from processing.proc_audio import from_spectro_to_waveform
 
 import matplotlib.pyplot as plt
 import librosa
@@ -110,6 +112,7 @@ def main():
                 path = ARGS.raw_data_dir + "/wavs/" + wav
 
                 data, rate = librosa.load(path, sr=SAMPLING_RATE)
+
                 if id not in id_to_wav_dict:
                     id_to_wav_dict[id] = [data]
             i += 1
@@ -126,6 +129,7 @@ def main():
                 if id in id_to_wav_dict:
                     id_to_wav_dict[id].append(raw_transcription)
 
+        # Dict written as ['filename' : [wav_file, text]]
         with open(ARGS.data_dir + "/all.raw.pickle", 'wb') as f:
             pickle.dump(id_to_wav_dict, f)
 
@@ -133,29 +137,7 @@ def main():
 
         with open(ARGS.data_dir + "/all.raw.pickle", 'rb') as f:
             id_to_wav_dict = pickle.load(f)
-            path = '/Volumes/Elements/lj/LJSpeech-1.1/wavs/LJ001-0001.wav'
-            #print(id_to_wav_dict['LJ001-0001'])
-            wav, rate = librosa.load(path, sr=SAMPLING_RATE)
-            mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
-            sess = tf.Session()
-            decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectrogram[:1, :]),
-                                mel_spectrogram[:-1, :]), 0)
-            decod_inp = sess.run(decod_inp_tensor)
-            decod_inp = decod_inp[:, -N_MEL:]
 
-            #padding time dimension
-            padded_mel_spectrogram = np.zeros((MAX_MEL_TIME_LENGTH, mel_spectrogram.shape[1]))
-            padded_mel_spectrogram[:mel_spectrogram.shape[0], :mel_spectrogram.shape[1]] = mel_spectrogram[:MAX_MEL_TIME_LENGTH]
-
-            padded_decod_input = np.zeros((MAX_MEL_TIME_LENGTH, decod_inp.shape[1]))
-            padded_decod_input[:decod_inp.shape[0], :decod_inp.shape[1]] = decod_inp[:MAX_MEL_TIME_LENGTH]
-
-            padded_spectrogram = np.zeros((MAX_MAG_TIME_LENGTH, spectrogram.shape[1]))
-            padded_spectrogram[:spectrogram.shape[0], :spectrogram.shape[1]] = spectrogram[:MAX_MAG_TIME_LENGTH]
-
-            tuple = (padded_mel_spectrogram, padded_spectrogram, padded_decod_input)
-
-            """
             #40-40-20 split
             #train1-train2-test, splitting train since datasets would be too large to pickle
             split1 = 0.4*len(id_to_wav_dict.items())
@@ -171,16 +153,21 @@ def main():
             vocab['P'] = 0
             i = 1
 
-            temp = {}
-            temp['LJ001-0001'] = data
-            id_to_wav_dict = temp
-
             for key, value in id_to_wav_dict.items():
                 counter += 1
                 wav = value[0]
                 sentence = value[1]
 
                 mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
+
+                # Validate signal reconstruction
+                # predicted_spectro_item = spectro
+                # predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
+                #                                                 HOP_LENGTH, WIN_LENGTH,
+                #                                                 N_ITER, WINDOW_TYPE,
+                #                                                 MAX_DB, REF_DB, PREEMPHASIS)
+                # save_wav(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
+                # exit(0)
 
                 list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
                 for char in list_of_existing_chars:
@@ -229,16 +216,13 @@ def main():
 
                 #if counter % split1 == 0:
                 #    break
-            """
 
-        with open("hopefully_gold.pickle", 'wb') as f:
-            pickle.dump(tuple, f)
 
-        #with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
-        #    pickle.dump(vocab, f)
+        with open(ARGS.data_dir + "/vocab.pickle", 'wb') as f:
+            pickle.dump(vocab, f)
 
-        #with open(ARGS.data_dir + "/small.pickle", 'wb') as f:
-        #    pickle.dump(toy_dataset, f)
+        with open(ARGS.data_dir + "/small.pickle", 'wb') as f:
+            pickle.dump(toy_dataset, f)
 
         #with open(ARGS.data_dir + "/train1.pickle", 'wb') as f:
         #    pickle.dump(train1_dataset, f)
@@ -248,6 +232,13 @@ def main():
 
         #with open(ARGS.data_dir + "/test.pickle", 'wb') as f:
         #    pickle.dump(test_dataset, f)
+
+
+def save_wav(wav, path, sr):
+	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+	#proposed by @dsmiller
+	wavfile.write(path, sr, wav.astype(np.int16))
+
 
 if __name__ == "__main__":
     main()
