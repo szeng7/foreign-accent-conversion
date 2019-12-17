@@ -9,84 +9,12 @@ import os
 import csv
 import tensorflow as tf
 import librosa
-#from processing.proc_audio import from_spectro_to_waveform
+
+from shared_util import *
 
 import matplotlib.pyplot as plt
 
 import sys
-
-
-
-#constants to be used when creating spectrograms/preprocessing
-
-N_FFT = 1024 #number of fourier transform points
-WINDOW_TYPE='hann' #type of window for FT
-PREEMPHASIS = 0.97 #importance factor on high freq signals
-SAMPLING_RATE = 16000
-FRAME_LENGTH = 0.05  # seconds, window length
-FRAME_SHIFT = 0.0125  # seconds, temporal shift
-HOP_LENGTH = int(SAMPLING_RATE * FRAME_SHIFT)
-WIN_LENGTH = int(SAMPLING_RATE * FRAME_LENGTH)
-N_MEL = 80 #num of mel bands
-REF_DB = 20 #reference level decibel
-MAX_DB = 100 #max decibel
-R = 5 #reduction factor
-MAX_MEL_TIME_LENGTH = 200  #max of the time dimension for a mel spectrogram
-MAX_MAG_TIME_LENGTH = 850  #max of the time dimension for a spectrogram
-NB_CHARS_MAX = 200  #max of the input text data
-
-
-def get_spectrograms(wav):
-    """
-    Helper function to convert wav form to spectrograms
-    """
-
-    waveform = wav.astype('float')
-    waveform, _ = librosa.effects.trim(waveform)
-
-    #filter out lower frequencies
-    waveform = np.append(waveform[0], waveform[1:] - PREEMPHASIS * waveform[:-1])
-
-    #short time fourier calculated
-    stft_matrix = librosa.stft(y=waveform, n_fft=N_FFT, hop_length=HOP_LENGTH, win_length=WIN_LENGTH)
-
-    #magnitude and mel spectrograms calculated
-    spectrogram = np.abs(stft_matrix)
-
-    mel_transform_matrix = librosa.filters.mel(SAMPLING_RATE, N_FFT, N_MEL)
-    mel_spectrogram = np.dot(mel_transform_matrix, spectrogram)
-
-    #convert to DB
-    mel_spectrogram = 20 * np.log10(np.maximum(1e-5, mel_spectrogram))
-    spectrogram = 20 * np.log10(np.maximum(1e-5, spectrogram))
-
-    #normalize
-    mel_spectrogram = np.clip((mel_spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
-    spectrogram = np.clip((spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
-
-    #(time, freq)
-    mel_spectrogram = mel_spectrogram.T.astype(np.float32)
-    spectrogram = spectrogram.T.astype(np.float32)
-
-    return mel_spectrogram, spectrogram
-
-def get_padded_spectrograms(wav):
-    """
-    Helper function to pad the spectrograms to specific length
-    """
-    mel_spectrogram, spectrogram = get_spectrograms(wav)
-    time = mel_spectrogram.shape[0]
-    if time % R != 0:
-        nb_paddings = R - (time % R)
-    else:
-        nb_paddings = 0
-    mel_spectrogram = np.pad(mel_spectrogram,
-                        [[0, nb_paddings], [0, 0]],
-                        mode="constant")
-    spectrogram = np.pad(spectrogram,
-                    [[0, nb_paddings], [0, 0]],
-                    mode="constant")
-    return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
 def main():
 
@@ -160,15 +88,6 @@ def main():
 
                 mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
 
-                # Validate signal reconstruction
-                # predicted_spectro_item = spectro
-                # predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
-                #                                                 HOP_LENGTH, WIN_LENGTH,
-                #                                                 N_ITER, WINDOW_TYPE,
-                #                                                 MAX_DB, REF_DB, PREEMPHASIS)
-                # save_wav(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
-                # exit(0)
-
                 list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
                 for char in list_of_existing_chars:
                     if char not in vocab:
@@ -222,12 +141,6 @@ def main():
 
         with open(ARGS.data_dir + "/dataset.pickle", 'wb') as f:
             pickle.dump(dataset, f)
-
-
-def save_wav(wav, path, sr):
-	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
-	#proposed by @dsmiller
-	wavfile.write(path, sr, wav.astype(np.int16))
 
 if __name__ == "__main__":
     main()

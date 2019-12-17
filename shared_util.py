@@ -90,6 +90,7 @@ def get_padded_spectrograms(wav):
     return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
 def save_wav(wav, path, sr):
+    # Change to 16 bit audio
 	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
 	wavfile.write(path, sr, wav.astype(np.int16))
 
