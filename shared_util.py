@@ -142,3 +142,14 @@ def from_spectro_to_waveform(spectro, n_fft, hop_length,
 
     return waveform.astype(np.float32)
 
+# Encode input text into vocabulary
+def encode_text(input, vocabulary):
+    output = [vocabulary[char] for char in list(input.lower().replace(" ", ""))]
+
+    if len(output) < NB_CHARS_MAX:
+        for i in range(NB_CHARS_MAX - len(output)):
+            output.append(vocabulary['P'])
+    else:
+        output = output[:NB_CHARS_MAX]   
+    return output
+ 

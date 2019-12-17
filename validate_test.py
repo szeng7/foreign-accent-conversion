@@ -12,41 +12,40 @@ import tensorflow as tf
 from scipy import signal
 from scipy.io import wavfile
 import pickle
+import librosa.display
 
-metadata = pd.read_csv('data/LJSpeech-1.1/metadata.csv',
-                       dtype='object', quoting=3, sep='|',
-                       header=None)
-len_train = int(TRAIN_SET_RATIO * len(metadata))
-metadata_testing = metadata.iloc[len_train:]
+with open('./data/lj/dataset.pickle', 'rb') as f:
+    data = pickle.load(f)
 
-# load testing data
-decoder_input_testing = joblib.load('data/decoder_input_training.pkl')
-mel_spectro_testing = joblib.load('data/mel_spectro_testing.pkl')
-spectro_testing = joblib.load('data/spectro_testing.pkl')
-text_input_testing = joblib.load('data/text_input_ml_testing.pkl')
+with open('./data/lj/vocab.pickle', 'rb') as f:
+    vocabulary = pickle.load(f)
+
+# Unneeded decoder input during validation testing
+zeros = np.zeros((1, MAX_MEL_TIME_LENGTH, N_MEL))
+
+# Select sample number, 0 indexed
+sample_num = 0
+# Try with input from training set, Input text corresponds to the ordering in the metadata.csv
+input_from_training = np.asarray([data[3][sample_num]])
+
+# Generate new text to input and test
+sentence = 'Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition'
+text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
-saved_model = load_model('results/model.h5')
-
-predictions = saved_model.predict([text_input_testing, decoder_input_testing])
+saved_model = load_model('results/model-best.h5')
+predictions = saved_model.predict([text_input, zeros])
 
 mel_pred = predictions[0]  # predicted mel spectrogram
 mag_pred = predictions[1]  # predicted mag spectrogram
 
-
 item_index = 0  # pick any index
-print('Selected item .wav filename: {}'.format(
-    metadata_testing.iloc[item_index][0]))
-print('Selected item transcript: {}'.format(
-    metadata_testing.iloc[item_index][1]))
-
 predicted_spectro_item = mag_pred[item_index]
 predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
                                                 HOP_LENGTH, WIN_LENGTH,
                                                 N_ITER, WINDOW_TYPE,
                                                 MAX_DB, REF_DB, PREEMPHASIS)
 
-import librosa.display
 plt.figure(figsize=(14, 5))
 save_wav(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
 librosa.display.waveplot(predicted_audio_item, sr=SAMPLING_RATE)
