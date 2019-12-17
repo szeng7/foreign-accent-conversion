@@ -16,7 +16,7 @@ mel_spectro_training = np.asarray(data[1])
 decoder_input_training = np.asarray(data[2])
 text_input_training = np.asarray(data[3])
 
-model = get_tacotron_model(N_MEL, R, K1, K2, NB_CHARS_MAX,
+model = tacotron(N_MEL, R, K1, K2, NB_CHARS_MAX,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
                            MAX_MAG_TIME_LENGTH, N_FFT,
                            vocabulary)

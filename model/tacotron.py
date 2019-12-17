@@ -7,7 +7,7 @@ from keras.layers import (Input, Embedding, concatenate, RepeatVector, Dense,
                           BatchNormalization, Lambda, Dot, Multiply)
 
 
-def get_tacotron_model(n_mels, r, k1, k2, nb_char_max,
+def tacotron(n_mels, r, k1, k2, nb_char_max,
                        embedding_size, mel_time_length,
                        mag_time_length, n_fft,
                        vocabulary):

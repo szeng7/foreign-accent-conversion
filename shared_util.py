@@ -33,10 +33,6 @@ BATCH_SIZE = 32
 NB_EPOCHS = 10
 EMBEDDING_SIZE = 256
 
-# Other
-TRAIN_SET_RATIO = 0.9
-
-
 def get_spectrograms(wav):
     """
     Helper function to convert wav form to spectrograms
