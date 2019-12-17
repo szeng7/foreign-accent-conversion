@@ -47,6 +47,6 @@ predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
                                                 MAX_DB, REF_DB, PREEMPHASIS)
 
 plt.figure(figsize=(14, 5))
-save(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
+save(predicted_audio_item,'temp.wav')
 librosa.display.waveplot(predicted_audio_item, sr=SAMPLING_RATE)
 plt.show()

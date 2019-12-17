@@ -58,8 +58,8 @@ def get_spectrograms(wav):
     spectrogram = 20 * np.log10(np.maximum(1e-5, spectrogram))
 
     #normalize
-    mel_spectrogram = np.clip((mel_spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
-    spectrogram = np.clip((spectrogram - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
+    mel_spectrogram = normalize(mel_spectrogram)
+    spectrogram = normalize(spectrogram)
 
     #(time, freq)
     mel_spectrogram = mel_spectrogram.T.astype(np.float32)
@@ -85,8 +85,11 @@ def get_padded_spectrograms(wav):
                     mode="constant")
     return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
-def save(wav, path, sr):
-	wavfile.write(path, sr, (convert_to_16bit(wav).astype(np.int16)))
+def normalize(data):
+    return np.clip((data - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
+
+def save(wav, path):
+	wavfile.write(path, SAMPLING_RATE, (convert_to_16bit(wav).astype(np.int16)))
 
 def convert_to_16bit(wav):
     output =  wav * 32767 / max(0.01, np.max(np.abs(wav)))
