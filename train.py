@@ -20,9 +20,8 @@ model = tacotron(N_MEL, R, K1, K2, NB_CHARS_MAX,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
                            MAX_MAG_TIME_LENGTH, N_FFT,
                            vocabulary)
-#model.summary()
-opt = Adam()
-model.compile(optimizer=opt,
+
+model.compile(optimizer=Adam(),
               loss=['mean_absolute_error', 'mean_absolute_error'])
 
 checkpoint = ModelCheckpoint("results/model.h5", monitor='loss', verbose=1,

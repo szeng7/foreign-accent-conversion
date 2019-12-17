@@ -41,8 +41,8 @@ def get_spectrograms(wav):
     waveform = wav.astype('float')
     waveform, _ = librosa.effects.trim(waveform)
 
-    #filter out lower frequencies
-    waveform = np.append(waveform[0], waveform[1:] - PREEMPHASIS * waveform[:-1])
+    #do a premphasis to get better audio results
+    waveform = signal.lfilter([1, -PREEMPHASIS], [1], waveform)
 
     #short time fourier calculated
     stft_matrix = librosa.stft(y=waveform, n_fft=N_FFT, hop_length=HOP_LENGTH, win_length=WIN_LENGTH)
@@ -85,10 +85,12 @@ def get_padded_spectrograms(wav):
                     mode="constant")
     return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
-def save_wav(wav, path, sr):
-    # Change to 16 bit audio
-	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
-	wavfile.write(path, sr, wav.astype(np.int16))
+def save(wav, path, sr):
+	wavfile.write(path, sr, (convert_to_16bit(wav).astype(np.int16)))
+
+def convert_to_16bit(wav):
+    output =  wav * 32767 / max(0.01, np.max(np.abs(wav)))
+    return output
 
 def get_griffin_lim(spectrogram, n_fft, hop_length,
                     win_length, window_type, n_iter):

@@ -88,6 +88,16 @@ def main():
 
                 mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
 
+
+                # Validate signal reconstruction
+                predicted_spectro_item = spectrogram
+                predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
+                                                                HOP_LENGTH, WIN_LENGTH,
+                                                                N_ITER, WINDOW_TYPE,
+                                                                MAX_DB, REF_DB, PREEMPHASIS)
+                save(predicted_audio_item,'test.wav',sr=SAMPLING_RATE)
+                exit(0)
+
                 list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
                 for char in list_of_existing_chars:
                     if char not in vocab:

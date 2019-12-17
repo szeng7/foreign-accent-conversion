@@ -41,6 +41,6 @@ predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
                                                 MAX_DB, REF_DB, PREEMPHASIS)
 
 # Save the generated wav
-save_wav(predicted_audio_item,'synthesized.wav',sr=SAMPLING_RATE)
+save(predicted_audio_item,'synthesized.wav',sr=SAMPLING_RATE)
 
 
