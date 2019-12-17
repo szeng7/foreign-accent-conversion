@@ -1,6 +1,6 @@
 from shared_util import *
 from keras.optimizers import Adam
-from model.tacotron import tacotron
+from tacotron import tacotron
 import pickle
 import numpy as np
 from keras.callbacks import ModelCheckpoint
