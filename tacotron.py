@@ -53,8 +53,8 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
 
     return Model(inputs=input_list, outputs=output_list)
 
-def preNet(input_data):
-    prenet = Dense(256)(input_data)
+def preNet(input):
+    prenet = Dense(256)(input)
     prenet = Activation('relu')(prenet)
     prenet = Dropout(0.5)(prenet)
     prenet = Dense(128)(prenet)
@@ -62,9 +62,9 @@ def preNet(input_data):
     prenet = Dropout(0.5)(prenet)
     return prenet
 
-def conv1dStack(kernel_sizes, input_data):
+def conv1dStack(kernel_sizes, input):
     convolution = Conv1D(filters=128, kernel_size=1,
-                  strides=1, padding='same')(input_data)
+                  strides=1, padding='same')(input)
     convolution = BatchNormalization()(convolution)
     convolution = Activation('relu')(convolution)
 
@@ -92,8 +92,8 @@ def HiOut(hiIn, nb_layers=4, activation="relu", bias=-3):
     return hi_out
 
 
-def CBHGEncoder(input_data, K_CBHG):
-    conv1dbank = conv1dStack(K_CBHG, input_data)
+def CBHGEncoder(input, kcbhg):
+    conv1dbank = conv1dStack(kcbhg, input)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=128, kernel_size=3,
@@ -103,7 +103,7 @@ def CBHGEncoder(input_data, K_CBHG):
     conv1dbank = Conv1D(filters=128, kernel_size=3,
                         strides=1, padding='same')(conv1dbank)
     conv1dbank = BatchNormalization()(conv1dbank)
-    residual = Add()([input_data, conv1dbank])
+    residual = Add()([input, conv1dbank])
 
     highway_net = HiOut(residual)
 
@@ -112,8 +112,8 @@ def CBHGEncoder(input_data, K_CBHG):
     return CBHG_encoder
 
 
-def CBHGPostProcess(input_data, K_CBHG):
-    conv1dbank = conv1dStack(K_CBHG, input_data)
+def CBHGPostProcess(input, kcbhg):
+    conv1dbank = conv1dStack(kcbhg, input)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=256, kernel_size=3,
@@ -124,7 +124,7 @@ def CBHGPostProcess(input_data, K_CBHG):
     conv1dbank = Conv1D(filters=80, kernel_size=3,
                         strides=1, padding='same')(conv1dbank)
     conv1dbank = BatchNormalization()(conv1dbank)
-    residual = Add()([input_data, conv1dbank])
+    residual = Add()([input, conv1dbank])
 
     highway_net = HiOut(residual)
 
@@ -133,8 +133,8 @@ def CBHGPostProcess(input_data, K_CBHG):
     return CBHG_post_proc
 
 
-def decoderRNNOutput(input_data):
-    stuff_to_add = [input_data, GRU(256, return_sequences=True)(input_data)]
+def decoderRNNOutput(input):
+    stuff_to_add = [input, GRU(256, return_sequences=True)(input)]
     inp2 = Add()(stuff_to_add)
     stuff_to_add_2 = [inp2, GRU(256)(inp2)]
     return Add()(stuff_to_add_2)
