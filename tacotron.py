@@ -7,61 +7,49 @@ from keras.layers import (Input, Embedding, concatenate, RepeatVector, Dense,
                           BatchNormalization, Lambda, Dot, Multiply)
 
 
-def tacotron(n_mels, r, k1, k2, nb_char_max,
-                       embedding_size, mel_time_length,
-                       mag_time_length, n_fft,
-                       vocabulary_size):
+'''
+Tacotron model architecture for training TTS model. Parameter explanations are
+provided in the share_util file.
+'''
+def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_time_length, n_fft,vocabulary_size):
+
     # Encoder:
     input_encoder = Input(shape=(nb_char_max,))
 
-    embedded = Embedding(input_dim=vocabulary_size,
-                         output_dim=embedding_size,
-                         input_length=nb_char_max)(input_encoder)
-    prenet_encoding = get_pre_net(embedded)
-
-    cbhg_encoding = get_CBHG_encoder(prenet_encoding,
-                                     k1)
+    prenet_encoding = get_pre_net(Embedding(vocabulary_size,embedding_size,input_length=nb_char_max)(input_encoder))
 
     # Decoder-part1-Prenet:
     input_decoder = Input(shape=(None, n_mels))
-    prenet_decoding = get_pre_net(input_decoder)
-    attention_rnn_output = get_attention_RNN()(prenet_decoding)
+    attention_rnn_output = get_attention_RNN()(get_pre_net(input_decoder))
 
     # Attention
-    attention_rnn_output_repeated = RepeatVector(nb_char_max)(attention_rnn_output)
-
-    attention_context = get_attention_context(cbhg_encoding, attention_rnn_output_repeated)
+    attention_context = get_attention_context(get_CBHG_encoder(prenet_encoding,k1),
+                                              RepeatVector(nb_char_max)(attention_rnn_output))
 
     context_shapes = (int(attention_context.shape[1]), int(attention_context.shape[2]))
     attention_rnn_output_reshaped = Reshape(context_shapes)(attention_rnn_output)
 
     # Decoder-part2:
-    input_of_decoder_rnn = concatenate(
-        [attention_context, attention_rnn_output_reshaped])
+    input_of_decoder_rnn = concatenate([attention_context, attention_rnn_output_reshaped])
     input_of_decoder_rnn_projected = Dense(256)(input_of_decoder_rnn)
 
-    output_of_decoder_rnn = get_decoder_RNN_output(
-        input_of_decoder_rnn_projected)
+    output_of_decoder_rnn = get_decoder_RNN_output(input_of_decoder_rnn_projected)
 
-    # mel_hat=TimeDistributed(Dense(n_mels*r))(output_of_decoder_rnn)
-    mel_hat = Dense(mel_time_length * n_mels * r)(output_of_decoder_rnn)
-    mel_hat_ = Reshape((mel_time_length, n_mels * r))(mel_hat)
+    mel_hat = Reshape((mel_time_length, n_mels * r))(Dense(mel_time_length * n_mels * r)(output_of_decoder_rnn))
 
+    # Define our lambda function for slicing
     def slice(x):
         return x[:, :, -n_mels:]
 
-    mel_hat_last_frame = Lambda(slice)(mel_hat_)
-    post_process_output = get_CBHG_post_process(mel_hat_last_frame,
-                                                k2)
+    mel_hat_last_frame = Lambda(slice)(mel_hat)
+    post_process_output = get_CBHG_post_process(mel_hat_last_frame,k2)
 
-    z_hat = Dense(mag_time_length * (1 + n_fft // 2))(post_process_output)
-    z_hat_ = Reshape((mag_time_length, (1 + n_fft // 2)))(z_hat)
+    z_hat = Reshape((mag_time_length, (1 + n_fft // 2)))(Dense(mag_time_length * (1 + n_fft // 2))(post_process_output))
 
     input_list = [input_encoder, input_decoder]
-    output_list = [mel_hat_, z_hat_]
+    output_list = [mel_hat, z_hat]
 
-    model = Model(inputs=input_list, outputs=output_list)
-    return model
+    return Model(inputs=input_list, outputs=output_list)
 
 def get_pre_net(input_data):
     prenet = Dense(256)(input_data)
@@ -70,22 +58,21 @@ def get_pre_net(input_data):
     prenet = Dense(128)(prenet)
     prenet = Activation('relu')(prenet)
     prenet = Dropout(0.5)(prenet)
-
     return prenet
 
-def get_conv1dbank(K_, input_data):
-    conv = Conv1D(filters=128, kernel_size=1,
+def get_conv1dbank(kernel_sizes, input_data):
+    convolution = Conv1D(filters=128, kernel_size=1,
                   strides=1, padding='same')(input_data)
-    conv = BatchNormalization()(conv)
-    conv = Activation('relu')(conv)
+    convolution = BatchNormalization()(convolution)
+    convolution = Activation('relu')(convolution)
 
-    for k_ in range(2, K_ + 1):
-        conv = Conv1D(filters=128, kernel_size=k_,
-                      strides=1, padding='same')(conv)
-        conv = BatchNormalization()(conv)
-        conv = Activation('relu')(conv)
+    for kernel_size in range(2, kernel_sizes + 1):
+        convolution = Conv1D(filters=128, kernel_size=kernel_size,
+                      strides=1, padding='same')(convolution)
+        convolution = BatchNormalization()(convolution)
+        convolution = Activation('relu')(convolution)
 
-    return conv
+    return convolution
 
 
 def get_highway_output(highway_input, nb_layers, activation="tanh", bias=-3):
