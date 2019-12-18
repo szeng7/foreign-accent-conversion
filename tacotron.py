@@ -62,13 +62,12 @@ def preNet(input):
     prenet = Dropout(0.5)(prenet)
     return prenet
 
-def conv1dStack(kernel_sizes, input):
+def conv1dStack(max_kernel_size, input):
     convolution = Conv1D(filters=128, kernel_size=1,
                   strides=1, padding='same')(input)
     convolution = BatchNormalization()(convolution)
     convolution = Activation('relu')(convolution)
-
-    for kernel_size in range(2, kernel_sizes + 1):
+    for kernel_size in range(2, max_kernel_size + 1):
         convolution = Conv1D(filters=128, kernel_size=kernel_size,
                       strides=1, padding='same')(convolution)
         convolution = BatchNormalization()(convolution)
@@ -92,8 +91,8 @@ def HiOut(hiIn, nb_layers=4, activation="relu", bias=-3):
     return hi_out
 
 
-def CBHGEncoder(input, kcbhg):
-    conv1dbank = conv1dStack(kcbhg, input)
+def CBHGEncoder(input, cbhg_kernel):
+    conv1dbank = conv1dStack(cbhg_kernel, input)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=128, kernel_size=3,
@@ -112,8 +111,8 @@ def CBHGEncoder(input, kcbhg):
     return CBHG_encoder
 
 
-def CBHGPostProcess(input, kcbhg):
-    conv1dbank = conv1dStack(kcbhg, input)
+def CBHGPostProcess(input, cbhg_kernel):
+    conv1dbank = conv1dStack(cbhg_kernel, input)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=256, kernel_size=3,
