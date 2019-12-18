@@ -6,7 +6,7 @@ DATA_DIR=data/lj
 MODELS_DIR=models
 SMALL=${DATA_DIR}/small.pickle
 
-PREPROCESS="python preprocess_synthesizer_data.py"
+PREPROCESS="python3 preprocess_synthesizer_data.py"
 
 if [ ! -f "${DATA_DIR}/small.pickle" ]; then
 
