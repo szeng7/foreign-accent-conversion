@@ -1,5 +1,4 @@
 # Quick validation for testing purposes 
-# TODO create testing loop of audio signals
 from keras.models import load_model
 from sklearn.externals import joblib
 from shared_util import *
@@ -41,10 +40,7 @@ mag_pred = predictions[1]  # predicted mag spectrogram
 
 item_index = 0  # pick any index
 predicted_spectro_item = mag_pred[item_index]
-predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
-                                                HOP_LENGTH, WIN_LENGTH,
-                                                N_ITER, WINDOW_TYPE,
-                                                MAX_DB, REF_DB, PREEMPHASIS)
+predicted_audio_item = convert_to_waveform(predicted_spectro_item)
 
 plt.figure(figsize=(14, 5))
 save(predicted_audio_item,'temp.wav')

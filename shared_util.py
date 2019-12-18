@@ -6,8 +6,15 @@ import copy
 from scipy import signal
 from scipy.io import wavfile
 
-#constants to be used when creating spectrograms/preprocessing
 
+# Model Parameters
+K1 = 16  # Size of the convolution bank in the encoder CBHG
+K2 = 8  # Size of the convolution bank in the post processing CBHG
+BATCH_SIZE = 32
+NB_EPOCHS = 10
+EMBEDDING_SIZE = 256
+
+# Signal Parameters
 N_FFT = 1024 #number of fourier transform points
 WINDOW_TYPE='hann' #type of window for FT
 PREEMPHASIS = 0.97 #importance factor on high freq signals
@@ -25,52 +32,27 @@ MAX_MAG_TIME_LENGTH = 850  #max of the time dimension for a spectrogram
 NB_CHARS_MAX = 200  #max of the input text 
 N_ITER = 50 #griffin-lim iterations
 
-
-# Deep Learning Model
-K1 = 16  # Size of the convolution bank in the encoder CBHG
-K2 = 8  # Size of the convolution bank in the post processing CBHG
-BATCH_SIZE = 32
-NB_EPOCHS = 10
-EMBEDDING_SIZE = 256
-
 def get_spectrograms(wav):
-    """
-    Helper function to convert wav form to spectrograms
-    """
+    waveform = wav.astype('float32')
+    waveform, interval_data = librosa.effects.trim(waveform)
 
-    waveform = wav.astype('float')
-    waveform, _ = librosa.effects.trim(waveform)
-
-    #do a premphasis to get better audio results
+    #premphasis to get better audio results
     waveform = signal.lfilter([1, -PREEMPHASIS], [1], waveform)
 
-    #short time fourier calculated
-    stft_matrix = librosa.stft(y=waveform, n_fft=N_FFT, hop_length=HOP_LENGTH, win_length=WIN_LENGTH)
-
-    #magnitude and mel spectrograms calculated
-    spectrogram = np.abs(stft_matrix)
-
-    mel_transform_matrix = librosa.filters.mel(SAMPLING_RATE, N_FFT, N_MEL)
-    mel_spectrogram = np.dot(mel_transform_matrix, spectrogram)
-
-    #convert to DB
-    mel_spectrogram = 20 * np.log10(np.maximum(1e-5, mel_spectrogram))
-    spectrogram = 20 * np.log10(np.maximum(1e-5, spectrogram))
-
-    #normalize
+    #FourierTransform
+    stft = np.abs(librosa.stft(y=waveform, n_fft=N_FFT, hop_length=HOP_LENGTH, win_length=WIN_LENGTH))
+    spectrogram = librosa.amplitude_to_db(stft)
+    mel_spectrogram = librosa.feature.melspectrogram(waveform, sr=SAMPLING_RATE, n_fft=N_FFT, hop_length=HOP_LENGTH, 
+                    win_length=WIN_LENGTH, window=WINDOW_TYPE, n_mels=N_MEL)
+    mel_spectrogram = librosa.power_to_db(mel_spectrogram)
     mel_spectrogram = normalize(mel_spectrogram)
     spectrogram = normalize(spectrogram)
-
-    #(time, freq)
     mel_spectrogram = mel_spectrogram.T.astype(np.float32)
     spectrogram = spectrogram.T.astype(np.float32)
 
     return mel_spectrogram, spectrogram
 
 def get_padded_spectrograms(wav):
-    """
-    Helper function to pad the spectrograms to specific length
-    """
     mel_spectrogram, spectrogram = get_spectrograms(wav)
     time = mel_spectrogram.shape[0]
     if time % R != 0:
@@ -86,7 +68,10 @@ def get_padded_spectrograms(wav):
     return mel_spectrogram.reshape((-1, N_MEL * R)), spectrogram
 
 def normalize(data):
-    return np.clip((data - REF_DB + MAX_DB) / MAX_DB, 1e-8, 1)
+    return np.clip((data + MAX_DB - REF_DB) / MAX_DB, 0, 1)
+
+def denormalize(data):
+    return (np.clip(data, 0, 1) * MAX_DB) - MAX_DB + REF_DB
 
 def save(wav, path):
 	wavfile.write(path, SAMPLING_RATE, (convert_to_16bit(wav).astype(np.int16)))
@@ -95,32 +80,15 @@ def convert_to_16bit(wav):
     output =  wav * 32767 / max(0.01, np.max(np.abs(wav)))
     return output
 
-def spectro_inversion(spectrogram, hop_length, win_length, window_type):
-    return librosa.istft(spectrogram, hop_length, win_length=win_length, window=window_type)
-
-def convert_to_waveform(spectro, n_fft, hop_length,
-                             win_length, n_iter, window_type,
-                             max_db, ref_db, preemphasis):
-    # transpose
-    spectro = spectro.T
-
-    # de-noramlize
-    spectro = (np.clip(spectro, 0, 1) * max_db) - max_db + ref_db
-
-    # transform spectrogram back into amplitude scale
-    fft_amps = librosa.core.db_to_amplitude(spectro)
-
-    # Use griffin-lim to reconstruct the signal
+def convert_to_waveform(spectrogram):
+    spectrogram = spectrogram.T
+    fft_amps = librosa.core.db_to_amplitude(denormalize(spectrogram))
     waveform = librosa.core.griffinlim(fft_amps, n_iter=N_ITER, hop_length=HOP_LENGTH,
             win_length=WIN_LENGTH, window=WINDOW_TYPE)
-
-    # de-preemphasis
-    waveform = signal.lfilter([1], [1, -preemphasis], waveform)
-
-    # trim
-    waveform, _ = librosa.effects.trim(waveform)
-
-    return waveform.astype(np.float32)
+    # invert pre-emphasis
+    waveform = signal.lfilter([1], [1, -PREEMPHASIS], waveform)
+    trimmed_signal, interval_data = librosa.effects.trim(waveform)
+    return trimmed_signal.astype(np.float32)
 
 # Encode input text into vocabulary
 def encode_text(input, vocabulary):
