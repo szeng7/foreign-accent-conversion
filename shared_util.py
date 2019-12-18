@@ -11,14 +11,14 @@ from scipy.io import wavfile
 K1 = 16  # Size of the convolution bank in the encoder CBHG
 K2 = 8  # Size of the convolution bank in the post processing CBHG
 BATCH_SIZE = 32
-NB_EPOCHS = 10
+EPOCHS = 10
 EMBEDDING_SIZE = 256
 
 # Signal Parameters
 N_FFT = 1024 #number of fourier transform points
 WINDOW_TYPE='hann' #type of window for FT
 PREEMPHASIS = 0.97 #importance factor on high freq signals
-SAMPLING_RATE = 16000
+SAMPLING_RATE = 18000
 FRAME_LENGTH = 0.05  # seconds, window length
 FRAME_SHIFT = 0.0125  # seconds, temporal shift
 HOP_LENGTH = int(SAMPLING_RATE * FRAME_SHIFT)
@@ -29,10 +29,10 @@ MAX_DB = 100 #max decibel
 R = 5 #reduction factor
 MAX_MEL_TIME_LENGTH = 200  #max of the time dimension for a mel spectrogram
 MAX_MAG_TIME_LENGTH = 850  #max of the time dimension for a spectrogram
-NB_CHARS_MAX = 200  #max of the input text 
-N_ITER = 50 #griffin-lim iterations
+MAX_LEN = 200  #max of the input text 
+N_ITER = 80 #griffin-lim iterations
 
-def get_spectrograms(wav):
+def create_spectrograms(wav):
     waveform = wav.astype('float32')
     waveform, interval_data = librosa.effects.trim(waveform)
 
@@ -50,10 +50,7 @@ def get_spectrograms(wav):
     mel_spectrogram = mel_spectrogram.T.astype(np.float32)
     spectrogram = spectrogram.T.astype(np.float32)
 
-    return mel_spectrogram, spectrogram
-
-def get_padded_spectrograms(wav):
-    mel_spectrogram, spectrogram = get_spectrograms(wav)
+    #Pad the spectrograms as a factor of the reduction
     time = mel_spectrogram.shape[0]
     if time % R != 0:
         nb_paddings = R - (time % R)
@@ -81,7 +78,7 @@ def convert_to_16bit(wav):
     return output
 
 def convert_to_waveform(spectrogram):
-    spectrogram = spectrogram.T
+    spectrogram = np.transpose(spectrogram)
     fft_amps = librosa.core.db_to_amplitude(denormalize(spectrogram))
     waveform = librosa.core.griffinlim(fft_amps, n_iter=N_ITER, hop_length=HOP_LENGTH,
             win_length=WIN_LENGTH, window=WINDOW_TYPE)
@@ -94,10 +91,10 @@ def convert_to_waveform(spectrogram):
 def encode_text(input, vocabulary):
     output = [vocabulary[char] for char in list(input.lower().replace(" ", ""))]
 
-    if len(output) < NB_CHARS_MAX:
-        for i in range(NB_CHARS_MAX - len(output)):
+    if len(output) < MAX_LEN:
+        for i in range(MAX_LEN - len(output)):
             output.append(vocabulary['P'])
     else:
-        output = output[:NB_CHARS_MAX]   
+        output = output[:MAX_LEN]   
     return output
  

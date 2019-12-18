@@ -81,13 +81,13 @@ def main():
                 wav = value[0]
                 sentence = value[1]
 
-                mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
+                mel_spectrogram, spectrogram = create_spectrograms(wav)
 
-                # Validate signal reconstruction
-                predicted_spectro_item = spectrogram
-                predicted_audio_item = convert_to_waveform(predicted_spectro_item)
-                save(predicted_audio_item, 'test.wav')
-                exit(0)
+                # # Validate signal reconstruction
+                # predicted_spectro_item = spectrogram
+                # predicted_audio_item = convert_to_waveform(predicted_spectro_item)
+                # save(predicted_audio_item, 'test.wav')
+                # exit(0)
 
                 list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
                 for char in list_of_existing_chars:
@@ -97,11 +97,11 @@ def main():
 
                 list_of_char_id = [vocab[char] for char in list(sentence.lower().replace(" ", ""))]
 
-                if len(list_of_char_id) < NB_CHARS_MAX:
-                    for i in range(NB_CHARS_MAX - len(list_of_char_id)):
+                if len(list_of_char_id) < MAX_LEN:
+                    for i in range(MAX_LEN - len(list_of_char_id)):
                         list_of_char_id.append(vocab['P'])
                 else:
-                    list_of_char_id = list_of_char_id[:NB_CHARS_MAX]
+                    list_of_char_id = list_of_char_id[:MAX_LEN]
 
                 sess = tf.Session()
                 decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectrogram[:1, :]),

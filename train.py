@@ -16,7 +16,7 @@ mel_spectro_training = np.asarray(data[1])
 decoder_input_training = np.asarray(data[2])
 text_input_training = np.asarray(data[3])
 
-model = tacotron(N_MEL, R, K1, K2, NB_CHARS_MAX,
+model = tacotron(N_MEL, R, K1, K2, MAX_LEN,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
                            MAX_MAG_TIME_LENGTH, N_FFT,
                            len(vocabulary))
@@ -29,7 +29,7 @@ checkpoint = ModelCheckpoint("results/model.h5", monitor='loss', verbose=1,
 
 train_history = model.fit([text_input_training, decoder_input_training],
                           [mel_spectro_training, spectro_training],
-                          epochs=NB_EPOCHS, batch_size=BATCH_SIZE,
+                          epochs=EPOCHS, batch_size=BATCH_SIZE,
                           verbose=1, validation_split=0.20,
                           callbacks=[checkpoint])
 
