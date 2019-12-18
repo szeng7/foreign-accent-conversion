@@ -19,7 +19,7 @@ text_input_training = np.asarray(data[3])
 model = tacotron(N_MEL, R, K1, K2, NB_CHARS_MAX,
                            EMBEDDING_SIZE, MAX_MEL_TIME_LENGTH,
                            MAX_MAG_TIME_LENGTH, N_FFT,
-                           vocabulary)
+                           len(vocabulary))
 
 model.compile(optimizer=Adam(),
               loss=['mean_absolute_error', 'mean_absolute_error'])
