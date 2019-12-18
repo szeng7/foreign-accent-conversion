@@ -29,11 +29,11 @@ sample_num = 0
 input_from_training = np.asarray([data[3][sample_num]])
 
 # Generate new text to input and test
-sentence = 'Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition'
+sentence = 'In the only sense'
 text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
-saved_model = load_model('results/model-best.h5')
+saved_model = load_model('results/curr_model.h5')
 predictions = saved_model.predict([text_input, zeros])
 
 mel_pred = predictions[0]  # predicted mel spectrogram

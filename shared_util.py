@@ -95,30 +95,10 @@ def convert_to_16bit(wav):
     output =  wav * 32767 / max(0.01, np.max(np.abs(wav)))
     return output
 
-def get_griffin_lim(spectrogram, n_fft, hop_length,
-                    win_length, window_type, n_iter):
-
-    spectro = copy.deepcopy(spectrogram)
-    for i in range(n_iter):
-        estimated_wav = spectro_inversion(spectro, hop_length,
-                                          win_length, window_type)
-        est_stft = librosa.stft(estimated_wav, n_fft,
-                                hop_length,
-                                win_length=win_length)
-        phase = est_stft / np.maximum(1e-8, np.abs(est_stft))
-        spectro = spectrogram * phase
-    estimated_wav = spectro_inversion(spectro, hop_length,
-                                      win_length, window_type)
-    result = np.real(estimated_wav)
-
-    return result
-
-
 def spectro_inversion(spectrogram, hop_length, win_length, window_type):
     return librosa.istft(spectrogram, hop_length, win_length=win_length, window=window_type)
 
-
-def from_spectro_to_waveform(spectro, n_fft, hop_length,
+def convert_to_waveform(spectro, n_fft, hop_length,
                              win_length, n_iter, window_type,
                              max_db, ref_db, preemphasis):
     # transpose
@@ -127,13 +107,12 @@ def from_spectro_to_waveform(spectro, n_fft, hop_length,
     # de-noramlize
     spectro = (np.clip(spectro, 0, 1) * max_db) - max_db + ref_db
 
-    # to amplitude
-    spectro = np.power(10.0, spectro * 0.05)
+    # transform spectrogram back into amplitude scale
+    fft_amps = librosa.core.db_to_amplitude(spectro)
 
-    # wav reconstruction
-    waveform = get_griffin_lim(spectro, n_fft, hop_length,
-                               win_length,
-                               window_type, n_iter)
+    # Use griffin-lim to reconstruct the signal
+    waveform = librosa.core.griffinlim(fft_amps, n_iter=N_ITER, hop_length=HOP_LENGTH,
+            win_length=WIN_LENGTH, window=WINDOW_TYPE)
 
     # de-preemphasis
     waveform = signal.lfilter([1], [1, -preemphasis], waveform)
