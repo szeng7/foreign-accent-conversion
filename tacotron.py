@@ -25,7 +25,7 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
     attention_rnn_output = GRU(256)(get_pre_net(input_decoder))
 
     # Attention
-    attention_context = get_attention_context(CBHGEncoder(prenet_encoding,k1),
+    attention_context = attentionContextRetrieval(CBHGEncoder(prenet_encoding,k1),
                                               RepeatVector(nb_char_max)(attention_rnn_output))
 
     context_shapes = (int(attention_context.shape[1]), int(attention_context.shape[2]))
@@ -77,20 +77,19 @@ def get_conv1dstack(kernel_sizes, input_data):
     return convolution
 
 
-def get_highway_output(highway_input, nb_layers, activation="tanh", bias=-3):
-    dim = K.int_shape(highway_input)[-1]  # dimension must be the same
+def HiOut(hiIn, nb_layers=4, activation="relu", bias=-3):
+    dim = K.int_shape(hiIn)[-1]  # dimension must be the same
     initial_bias = k_init.Constant(bias)
     for n in range(nb_layers):
-        H = Dense(units=dim, bias_initializer=initial_bias)(highway_input)
+        H = Dense(units=dim, bias_initializer=initial_bias)(hiIn)
         H = Activation("sigmoid")(H)
-        carry_gate = Lambda(lambda x: 1.0 - x,
-                            output_shape=(dim,))(H)
-        transform_gate = Dense(units=dim)(highway_input)
-        transform_gate = Activation(activation)(transform_gate)
-        transformed = Multiply()([H, transform_gate])
-        carried = Multiply()([carry_gate, highway_input])
-        highway_output = Add()([transformed, carried])
-    return highway_output
+        carry = Lambda(lambda x: 1.0 - x,output_shape=(dim,))(H)
+        transform = Dense(units=dim)(hiIn)
+        transform = Activation(activation)(transform)
+        transformed = Multiply()([H, transform])
+        carried = Multiply()([carry, hiIn])
+        hi_out = Add()([transformed, carried])
+    return hi_out
 
 
 def CBHGEncoder(input_data, K_CBHG):
@@ -104,12 +103,9 @@ def CBHGEncoder(input_data, K_CBHG):
     conv1dbank = Conv1D(filters=128, kernel_size=3,
                         strides=1, padding='same')(conv1dbank)
     conv1dbank = BatchNormalization()(conv1dbank)
-
-    # residual learning helps training deep networks
-    # (https://arxiv.org/pdf/1512.03385.pdf)
     residual = Add()([input_data, conv1dbank])
 
-    highway_net = get_highway_output(residual, 4, activation='relu')
+    highway_net = HiOut(residual)
 
     CBHG_encoder = Bidirectional(GRU(128, return_sequences=True))(highway_net)
 
@@ -122,6 +118,7 @@ def CBHGPostProcess(input_data, K_CBHG):
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=256, kernel_size=3,
                         strides=1, padding='same')(conv1dbank)
+    # We love batch norm
     conv1dbank = BatchNormalization()(conv1dbank)
     conv1dbank = Activation('relu')(conv1dbank)
     conv1dbank = Conv1D(filters=80, kernel_size=3,
@@ -129,7 +126,7 @@ def CBHGPostProcess(input_data, K_CBHG):
     conv1dbank = BatchNormalization()(conv1dbank)
     residual = Add()([input_data, conv1dbank])
 
-    highway_net = get_highway_output(residual, 4, activation='relu')
+    highway_net = HiOut(residual)
 
     CBHG_post_proc = Bidirectional(GRU(128))(highway_net)
 
@@ -142,7 +139,7 @@ def decoderRNNOutput(input_data):
     stuff_to_add_2 = [inp2, GRU(256)(inp2)]
     return Add()(stuff_to_add_2)
 
-def get_attention_context(encoder_output, attention_rnn_output):
+def attentionContextRetrieval(encoder_output, attention_rnn_output):
     attention_input = Concatenate(axis=-1)([encoder_output,
                                             attention_rnn_output])
     e = Dense(10, activation="tanh")(attention_input)
