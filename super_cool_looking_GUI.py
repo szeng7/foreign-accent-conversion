@@ -16,6 +16,9 @@ event, values = window.Read()
 wavFilePath = values[0]
 
 print('Path to wav file:', wavFilePath)
+f = open("file_path.txt","w")
+f.write(wavFilePath)
+f.close()
 
 #define stream chunk
 chunk = 1024
