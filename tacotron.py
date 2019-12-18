@@ -16,13 +16,13 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
     # Encoder:
     input_encoder = Input(shape=(nb_char_max,))
 
-    prenet_encoding = get_pre_net(Embedding(vocabulary_size,embedding_size,input_length=nb_char_max)(input_encoder))
+    prenet_encoding = preNet(Embedding(vocabulary_size,embedding_size,input_length=nb_char_max)(input_encoder))
 
     # Decoder-part1-Prenet:
     input_decoder = Input(shape=(None, n_mels))
 
     # Attention RNN
-    attention_rnn_output = GRU(256)(get_pre_net(input_decoder))
+    attention_rnn_output = GRU(256)(preNet(input_decoder))
 
     # Attention
     attention_context = attentionContextRetrieval(CBHGEncoder(prenet_encoding,k1),
@@ -53,7 +53,7 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
 
     return Model(inputs=input_list, outputs=output_list)
 
-def get_pre_net(input_data):
+def preNet(input_data):
     prenet = Dense(256)(input_data)
     prenet = Activation('relu')(prenet)
     prenet = Dropout(0.5)(prenet)
@@ -62,7 +62,7 @@ def get_pre_net(input_data):
     prenet = Dropout(0.5)(prenet)
     return prenet
 
-def get_conv1dstack(kernel_sizes, input_data):
+def conv1dStack(kernel_sizes, input_data):
     convolution = Conv1D(filters=128, kernel_size=1,
                   strides=1, padding='same')(input_data)
     convolution = BatchNormalization()(convolution)
@@ -93,7 +93,7 @@ def HiOut(hiIn, nb_layers=4, activation="relu", bias=-3):
 
 
 def CBHGEncoder(input_data, K_CBHG):
-    conv1dbank = get_conv1dstack(K_CBHG, input_data)
+    conv1dbank = conv1dStack(K_CBHG, input_data)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=128, kernel_size=3,
@@ -113,7 +113,7 @@ def CBHGEncoder(input_data, K_CBHG):
 
 
 def CBHGPostProcess(input_data, K_CBHG):
-    conv1dbank = get_conv1dstack(K_CBHG, input_data)
+    conv1dbank = conv1dStack(K_CBHG, input_data)
     conv1dbank = MaxPooling1D(pool_size=2, strides=1,
                               padding='same')(conv1dbank)
     conv1dbank = Conv1D(filters=256, kernel_size=3,
