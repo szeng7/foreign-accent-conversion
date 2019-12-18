@@ -1,5 +1,4 @@
 # Quick validation for testing purposes 
-# TODO create testing loop of audio signals
 from keras.models import load_model
 from sklearn.externals import joblib
 from shared_util import *
@@ -29,11 +28,11 @@ sample_num = 0
 input_from_training = np.asarray([data[3][sample_num]])
 
 # Generate new text to input and test
-sentence = 'Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition'
+sentence = 'In the only sense'
 text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
-saved_model = load_model('results/model-best.h5')
+saved_model = load_model('results/curr_model.h5')
 predictions = saved_model.predict([text_input, zeros])
 
 mel_pred = predictions[0]  # predicted mel spectrogram
@@ -41,12 +40,9 @@ mag_pred = predictions[1]  # predicted mag spectrogram
 
 item_index = 0  # pick any index
 predicted_spectro_item = mag_pred[item_index]
-predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
-                                                HOP_LENGTH, WIN_LENGTH,
-                                                N_ITER, WINDOW_TYPE,
-                                                MAX_DB, REF_DB, PREEMPHASIS)
+predicted_audio_item = convert_to_waveform(predicted_spectro_item)
 
 plt.figure(figsize=(14, 5))
-save_wav(predicted_audio_item,'temp.wav',sr=SAMPLING_RATE)
+save(predicted_audio_item,'temp.wav')
 librosa.display.waveplot(predicted_audio_item, sr=SAMPLING_RATE)
 plt.show()

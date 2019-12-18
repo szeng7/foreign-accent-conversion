@@ -65,11 +65,6 @@ def main():
         with open(ARGS.data_dir + "/all.raw.pickle", 'rb') as f:
             id_to_wav_dict = pickle.load(f)
 
-            #40-40-20 split
-            #train1-train2-test, splitting train since datasets would be too large to pickle
-            split1 = 0.4*len(id_to_wav_dict.items())
-            split2 = 0.8*len(id_to_wav_dict.items())
-
             # list of all of the training data
             all_padded_spectro = []
             all_mel_spectro = []
@@ -86,7 +81,13 @@ def main():
                 wav = value[0]
                 sentence = value[1]
 
-                mel_spectrogram, spectrogram = get_padded_spectrograms(wav)
+                mel_spectrogram, spectrogram = create_spectrograms(wav)
+
+                # # Validate signal reconstruction
+                # predicted_spectro_item = spectrogram
+                # predicted_audio_item = convert_to_waveform(predicted_spectro_item)
+                # save(predicted_audio_item, 'test.wav')
+                # exit(0)
 
                 list_of_existing_chars = list(set(sentence.lower().replace(" ", "")))
                 for char in list_of_existing_chars:
@@ -96,11 +97,11 @@ def main():
 
                 list_of_char_id = [vocab[char] for char in list(sentence.lower().replace(" ", ""))]
 
-                if len(list_of_char_id) < 200:
-                    for i in range(200 - len(list_of_char_id)):
+                if len(list_of_char_id) < MAX_LEN:
+                    for i in range(MAX_LEN - len(list_of_char_id)):
                         list_of_char_id.append(vocab['P'])
                 else:
-                    list_of_char_id = list_of_char_id[:200]
+                    list_of_char_id = list_of_char_id[:MAX_LEN]
 
                 sess = tf.Session()
                 decod_inp_tensor = tf.concat((tf.zeros_like(mel_spectrogram[:1, :]),
@@ -108,7 +109,6 @@ def main():
                 decod_inp = sess.run(decod_inp_tensor)
                 decod_inp = decod_inp[:, -N_MEL:]
 
-                #padding time dimension
                 padded_mel_spectrogram = np.zeros((MAX_MEL_TIME_LENGTH, mel_spectrogram.shape[1]))
                 padded_mel_spectrogram[:mel_spectrogram.shape[0], :mel_spectrogram.shape[1]] = mel_spectrogram[:MAX_MEL_TIME_LENGTH]
 

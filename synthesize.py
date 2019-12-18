@@ -35,12 +35,9 @@ item_index = 0  # pick any index
 predicted_spectro_item = mag_pred[item_index]
 
 #Griffin Lim reconstruction
-predicted_audio_item = from_spectro_to_waveform(predicted_spectro_item, N_FFT,
-                                                HOP_LENGTH, WIN_LENGTH,
-                                                N_ITER, WINDOW_TYPE,
-                                                MAX_DB, REF_DB, PREEMPHASIS)
+predicted_audio_item = convert_to_waveform(predicted_spectro_item)
 
 # Save the generated wav
-save_wav(predicted_audio_item,'synthesized.wav',sr=SAMPLING_RATE)
+save(predicted_audio_item,'synthesized.wav')
 
 
