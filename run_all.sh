@@ -9,7 +9,6 @@ deepspeech --model ../deepspeech/deepspeech-0.6.0-models/output_graph.pbmm --lm 
 deactivate
 
 . venv3.6/bin/activate
-python synthesize.py
-deactivate
-
+python synthesize.py &&
 python play_results.py
+deactivate

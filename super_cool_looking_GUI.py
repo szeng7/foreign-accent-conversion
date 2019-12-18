@@ -4,16 +4,16 @@ import wave
 
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
-RATE = 44100
+RATE = 16000
 CHUNK = 1024
-RECORD_SECONDS = 5
+RECORD_SECONDS = 3
 WAVE_OUTPUT_FILENAME = "BigBoiVoice.wav"
 
 def record():
     audio = pyaudio.PyAudio()
 
     # start Recording
-    stream = audio.open(format=FORMAT, channels=CHANNELS,
+    stream = audio.open(format=audio.get_format_from_width(2), channels=CHANNELS,
                     rate=RATE, input=True,
                     frames_per_buffer=CHUNK)
     print("recording...")
