@@ -17,7 +17,7 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
 
     prenet_encoding = preNet(Embedding(vocabulary_size,embedding_size,input_length=nb_char_max)(input_encoder))
 
-    input_decoder = Input(shape=(None, n_mels))
+    input_decoder = prenet_encoding
 
     attention_rnn_output = GRU(256)(preNet(input_decoder))
 
@@ -43,7 +43,7 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
 
     z_hat = Reshape((mag_time_length, (1 + n_fft // 2)))(Dense(mag_time_length * (1 + n_fft // 2))(post_process_output))
 
-    input_list = [input_encoder, input_decoder]
+    input_list = [input_encoder]
     output_list = [mel_hat, z_hat]
 
     return Model(inputs=input_list, outputs=output_list)
@@ -72,7 +72,7 @@ def conv1dStack(max_kernel_size, input):
 
 
 def HiOut(hiIn, nb_layers=4, activation="relu", bias=-3):
-    dim = K.int_shape(hiIn)[-1]  # dimension must be the same
+    dim = K.int_shape(hiIn)[-1]
     initial_bias = k_init.Constant(bias)
     for n in range(nb_layers):
         H = Dense(units=dim, bias_initializer=initial_bias)(hiIn)
