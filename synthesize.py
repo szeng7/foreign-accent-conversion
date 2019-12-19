@@ -21,11 +21,13 @@ with open('./data/lj/vocab.pickle', 'rb') as f:
 zeros = np.zeros((1, MAX_MEL_TIME_LENGTH, N_MEL))
 
 # Generate new text to input and test
-sentence = 'Printing, in the only sense with which we are at present concerned, differs from most if not from all the arts and crafts represented in the Exhibition'
+with open('out.txt', 'r') as f:
+	sentence = f.read().strip()
+	print(sentence)
 text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
-saved_model = load_model('results/model-best.h5')
+saved_model = load_model('model.h5')
 predictions = saved_model.predict([text_input, zeros])
 
 mel_pred = predictions[0]  # predicted mel spectrogram
