@@ -32,19 +32,19 @@ def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_
 
     output_of_decoder_rnn = decoderRNNOutput(input_of_decoder_rnn_projected)
 
-    mel_hat = Reshape((mel_time_length, n_mels * r))(Dense(mel_time_length * n_mels * r)(output_of_decoder_rnn))
+    mel_spectro_out = Reshape((mel_time_length, n_mels * r))(Dense(mel_time_length * n_mels * r)(output_of_decoder_rnn))
 
     # Define our lambda function for slicing
     def slice(x):
         return x[:, :, -n_mels:]
 
-    mel_hat_last_frame = Lambda(slice)(mel_hat)
-    post_process_output = CBHGPostProcess(mel_hat_last_frame,k2)
+    last_frame_mel = Lambda(slice)(mel_spectro_out)
+    post_process_output = CBHGPostProcess(last_frame_mel, k2)
 
-    z_hat = Reshape((mag_time_length, (1 + n_fft // 2)))(Dense(mag_time_length * (1 + n_fft // 2))(post_process_output))
+    pred_spectrogram = Reshape((mag_time_length, (1 + n_fft // 2)))(Dense(mag_time_length * (1 + n_fft // 2))(post_process_output))
 
     input_list = [input_encoder]
-    output_list = [mel_hat, z_hat]
+    output_list = [mel_spectro_out, pred_spectrogram]
 
     return Model(inputs=input_list, outputs=output_list)
 
