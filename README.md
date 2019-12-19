@@ -3,11 +3,11 @@
 
 ### Dependencies:
 
-tensorflow==1.10.0
-librosa==0.7.1
-keras==2.2.4
-nnmnkwii
-python version 3.6
+- tensorflow==1.10.0
+- librosa==0.7.1
+- keras==2.2.4
+- nnmnkwii
+- python version 3.6
 
 ### Steps to train and validate Tacotron: 
 1. Download LJ dataset
