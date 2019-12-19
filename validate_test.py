@@ -33,7 +33,7 @@ text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
 saved_model = load_model('results/model.h5')
-predictions = saved_model.predict([text_input])
+predictions = saved_model.predict([input_from_training])
 
 mel_pred = predictions[0]  # predicted mel spectrogram
 mag_pred = predictions[1]  # predicted mag spectrogram

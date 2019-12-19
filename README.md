@@ -1,6 +1,19 @@
 ## Overview
 
-There's currently a toy dataset in `data/lj/small.pickle` with about 20 examples (20 wav files as numpy arrays and the corresponding sentences). It's small enough to use for debugging purposes, especially since the entire dataset is around 3.5 GB (which I have locally).
 
-To run the entire experiment so far, run `./run_synthesizer_expt.sh`. You might have some pathway issues with the raw-dataset-directory (since I have it pointed to my local directory, but if that's the case, just comment that line out). Since I have a check for the small.pickle file, it should skip right to the model file `trainer.py` and start running from there.
+### Dependencies:
 
+tensorflow==1.10.0
+librosa==0.7.1
+keras==2.2.4
+nnmnkwii
+python version 3.6
+
+### Steps to train and validate Tacotron: 
+1. Download LJ dataset
+2. Create directory `/data` and untar LJ dataset in there
+3. Create directory `/data/lj` (for the compressed dataset)
+4. Create directory `/results`
+5. run `./run_synthesizer_expt.sh`
+6. `python3 train.py`
+7. `python3 validate_test.py` (to validate reconstruction)
