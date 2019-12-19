@@ -4,6 +4,24 @@ from tacotron import tacotron
 import pickle
 import numpy as np
 from keras.callbacks import ModelCheckpoint
+import tensorflow as tf
+from nnmnkwii.metrics import melcd
+
+class PredictionCallback(tf.keras.callbacks.Callback):
+  def on_epoch_end(self, epoch, logs={}):
+    y_pred = self.model.predict([self.validation_data[0], self.validation_data[1]])
+    pred_mel = y_pred[0]
+    actual_mel = self.validation_data[2]
+
+    #denormalize
+    pred_mel = (np.clip(pred_mel, 0, 1) * MAX_DB) - MAX_DB + REF_DB
+    actual_mel = (np.clip(actual_mel, 0, 1) * MAX_DB) - MAX_DB + REF_DB
+
+    mcd = []
+    for pred, actual in zip(pred_mel, actual_mel):
+        mcd.append(melcd(pred, actual))
+
+    print(f"Validation Mean MCD: {np.mean(mcd)}")
 
 with open('./data/lj/dataset.pickle', 'rb') as f:
     data = pickle.load(f)
@@ -29,8 +47,8 @@ checkpoint = ModelCheckpoint("results/model.h5", monitor='loss', verbose=1,
 train_history = model.fit([text_input_training],
                           [mel_spectro_training, spectro_training],
                           epochs=EPOCHS, batch_size=BATCH_SIZE,
-                          verbose=1, validation_split=0.20,
-                          callbacks=[checkpoint])
+                          verbose=1, validation_split=0.10,
+                          callbacks=[checkpoint, PredictionCallback()])
 
 print('------SAVING MODEL---------')
 model.save('results/model.h5')
