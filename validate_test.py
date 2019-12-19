@@ -32,7 +32,7 @@ sentence = 'In the only sense'
 text_input = np.asarray([encode_text(sentence, vocabulary)])
 
 # load model
-saved_model = load_model('results/curr_model.h5')
+saved_model = load_model('results/model.h5')
 predictions = saved_model.predict([text_input])
 
 mel_pred = predictions[0]  # predicted mel spectrogram
