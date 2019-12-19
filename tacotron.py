@@ -13,25 +13,20 @@ provided in the share_util file.
 '''
 def tacotron(n_mels, r, k1, k2, nb_char_max,embedding_size, mel_time_length,mag_time_length, n_fft,vocabulary_size):
 
-    # Encoder:
     input_encoder = Input(shape=(nb_char_max,))
 
     prenet_encoding = preNet(Embedding(vocabulary_size,embedding_size,input_length=nb_char_max)(input_encoder))
 
-    # Decoder-part1-Prenet:
     input_decoder = Input(shape=(None, n_mels))
 
-    # Attention RNN
     attention_rnn_output = GRU(256)(preNet(input_decoder))
 
-    # Attention
     attention_context = attentionContextRetrieval(CBHGEncoder(prenet_encoding,k1),
                                               RepeatVector(nb_char_max)(attention_rnn_output))
 
     context_shapes = (int(attention_context.shape[1]), int(attention_context.shape[2]))
     attention_rnn_output_reshaped = Reshape(context_shapes)(attention_rnn_output)
 
-    # Decoder-part2:
     input_of_decoder_rnn = concatenate([attention_context, attention_rnn_output_reshaped])
     input_of_decoder_rnn_projected = Dense(256)(input_of_decoder_rnn)
 
